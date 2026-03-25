@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Experience from "@/models/Experience";
 import { experienceSchema } from "@/lib/validations";
 
@@ -10,8 +9,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -19,8 +18,8 @@ export async function PUT(
     const validated = experienceSchema.parse(body);
 
     await connectDB();
-    const experience = await Experience.findByIdAndUpdate(
-      params.id,
+    const experience = await Experience.findOneAndUpdate(
+      { _id: params.id, userId: user.id },
       validated,
       { new: true, runValidators: true }
     );
@@ -56,13 +55,16 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const experience = await Experience.findByIdAndDelete(params.id);
+    const experience = await Experience.findOneAndDelete({
+      _id: params.id,
+      userId: user.id,
+    });
 
     if (!experience) {
       return NextResponse.json(

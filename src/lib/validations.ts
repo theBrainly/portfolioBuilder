@@ -1,4 +1,15 @@
 import { z } from "zod";
+import {
+  DESIGN_PRESET_IDS,
+  HOME_SECTION_IDS,
+  THEME_PALETTE_IDS,
+} from "@/constants/siteCustomization";
+import {
+  isReservedPortfolioSlug,
+  isValidCustomDomain,
+  normalizeCustomDomain,
+  normalizePortfolioSlug,
+} from "@/lib/portfolioUrl";
 
 export const projectSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
@@ -58,6 +69,7 @@ export const contactSchema = z.object({
   email: z.string().email("Invalid email"),
   subject: z.string().min(3, "Subject must be 3+ characters"),
   message: z.string().min(10, "Message must be 10+ characters"),
+  portfolioSlug: z.string().optional().default(""),
 });
 
 export const settingsSchema = z.object({
@@ -83,11 +95,61 @@ export const settingsSchema = z.object({
   siteTitle: z.string().min(1),
   siteDescription: z.string().min(1),
   ogImage: z.string().optional().default(""),
+  customDomain: z
+    .string()
+    .optional()
+    .default("")
+    .transform((value) => normalizeCustomDomain(value))
+    .refine((value) => isValidCustomDomain(value), {
+      message: "Enter a valid custom domain such as yourname.com",
+    }),
+  portfolioSlug: z
+    .string()
+    .optional()
+    .default("")
+    .transform((value) => normalizePortfolioSlug(value))
+    .refine((value) => !value || !isReservedPortfolioSlug(value), {
+      message: "Choose a different slug because this path is reserved",
+    }),
+  brandName: z.string().min(1, "Brand name is required"),
+  brandMark: z.string().min(1, "Logo mark is required").max(3, "Use up to 3 characters"),
+  navbarCTA: z.string().min(1, "Navbar CTA is required"),
+  footerDescription: z.string().min(1, "Footer description is required"),
+  footerCopyright: z.string().min(1, "Footer copyright is required"),
+  themePalette: z.enum(THEME_PALETTE_IDS),
+  designPreset: z.enum(DESIGN_PRESET_IDS),
+  homeSectionOrder: z
+    .array(z.enum(HOME_SECTION_IDS))
+    .length(HOME_SECTION_IDS.length, "Every homepage section must be ordered exactly once")
+    .refine((value) => new Set(value).size === HOME_SECTION_IDS.length, {
+      message: "Homepage sequence cannot contain duplicates",
+    }),
+  sectionLabels: z.object({
+    about: z.string().min(1),
+    skills: z.string().min(1),
+    experience: z.string().min(1),
+    projects: z.string().min(1),
+    testimonials: z.string().min(1),
+    contact: z.string().min(1),
+  }),
 });
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email"),
   password: z.string().min(6, "Password must be 6+ characters"),
+});
+
+export const signupSchema = z.object({
+  name: z.string().min(2, "Name must be 2+ characters"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(6, "Password must be 6+ characters"),
+  portfolioSlug: z
+    .string()
+    .min(2, "Slug must be at least 2 characters")
+    .transform((value) => normalizePortfolioSlug(value))
+    .refine((value) => !!value && !isReservedPortfolioSlug(value), {
+      message: "Choose a different slug because this path is reserved",
+    }),
 });
 
 export type ProjectFormData = z.infer<typeof projectSchema>;
@@ -97,3 +159,4 @@ export type TestimonialFormData = z.infer<typeof testimonialSchema>;
 export type ContactFormData = z.infer<typeof contactSchema>;
 export type SettingsFormData = z.infer<typeof settingsSchema>;
 export type LoginFormData = z.infer<typeof loginSchema>;
+export type SignupFormData = z.infer<typeof signupSchema>;

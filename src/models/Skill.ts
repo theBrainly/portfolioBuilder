@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface ISkillDocument extends Document {
+  userId: mongoose.Types.ObjectId;
   name: string;
   icon: string;
   category: string;
@@ -11,6 +12,7 @@ export interface ISkillDocument extends Document {
 
 const SkillSchema = new Schema<ISkillDocument>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     name: { type: String, required: true, trim: true },
     icon: { type: String, default: "" },
     category: {

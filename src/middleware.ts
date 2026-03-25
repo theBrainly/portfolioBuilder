@@ -5,20 +5,18 @@ import type { NextRequest } from "next/server";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip login page
-  if (pathname === "/admin/login") return NextResponse.next();
-
-  // Check token for admin routes
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-  // Protect admin pages
+  if ((pathname === "/login" || pathname === "/signup" || pathname === "/admin/login") && token) {
+    return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+  }
+
   if (pathname.startsWith("/admin")) {
     if (!token) {
-      return NextResponse.redirect(new URL("/admin/login", req.url));
+      return NextResponse.redirect(new URL("/login", req.url));
     }
   }
 
-  // Protect admin API routes
   if (pathname.startsWith("/api/admin")) {
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,5 +27,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/login", "/signup"],
 };

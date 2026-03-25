@@ -1,36 +1,163 @@
 "use client";
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+
 import ProjectCard from "./ProjectCard";
 import SectionHeader from "./SectionHeader";
-import type { IProject } from "@/types";
+import type { DesignPreset } from "@/constants/siteCustomization";
+import type { IProject, ISiteSettings } from "@/types";
 
-const CATS = ["All", "Full Stack", "Frontend", "Backend", "Mobile"];
+export default function ProjectsSection({
+  projects,
+  preset = "classic",
+  settings = null,
+}: {
+  projects: IProject[];
+  preset?: DesignPreset;
+  settings?: ISiteSettings | null;
+}) {
+  const categories = Array.from(new Set(projects.map((project) => project.category))).slice(0, 3);
+  const categorySummary = categories.length
+    ? categories.join(", ").replace(/,([^,]*)$/, " and$1")
+    : "product, frontend, and full-stack";
 
-export default function ProjectsSection({ projects }: { projects: IProject[] }) {
-  const [cat, setCat] = useState("All");
-  const filtered = useMemo(() => cat === "All" ? projects : projects.filter((p) => p.category === cat), [projects, cat]);
-  const available = CATS.filter((c) => c === "All" || projects.some((p) => p.category === c));
+  if (preset === "minimal") {
+    return (
+      <section id="projects" className="section-padding">
+        <div className="section-container">
+          <SectionHeader
+            label="Projects"
+            title="Selected work"
+            description={`A clean, straightforward view of shipped work across ${categorySummary} projects.`}
+            preset={preset}
+            align="center"
+          />
+
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {projects.slice(0, 6).map((project, index) => (
+              <ProjectCard
+                key={project._id}
+                project={project}
+                index={index}
+                preset={preset}
+                settings={settings}
+              />
+            ))}
+          </div>
+
+          {projects.length === 0 && (
+            <p className="py-16 text-center text-lg text-muted-foreground">
+              Selected projects will appear here as they are published.
+            </p>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  if (preset === "retro") {
+    return (
+      <section id="projects" className="section-padding">
+        <div className="section-container">
+          <SectionHeader
+            label="Projects"
+            title="Shipped builds"
+            description={`A command-line inspired list of portfolio work across ${categorySummary} projects.`}
+            preset={preset}
+          />
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {projects.slice(0, 6).map((project, index) => (
+              <ProjectCard
+                key={project._id}
+                project={project}
+                index={index}
+                preset={preset}
+                settings={settings}
+              />
+            ))}
+          </div>
+
+          {projects.length === 0 && (
+            <p className="py-16 text-center font-mono text-lg text-primary/70">
+              No project modules published yet.
+            </p>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  if (preset === "os") {
+    return (
+      <section id="projects" className="section-padding">
+        <div className="section-container">
+          <SectionHeader
+            label="Projects"
+            title="Project windows"
+            description={`A desktop-style collection of work across ${categorySummary} categories, with each project opened like its own app.`}
+            preset={preset}
+          />
+
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {projects.slice(0, 6).map((project, index) => (
+              <ProjectCard
+                key={project._id}
+                project={project}
+                index={index}
+                preset={preset}
+                settings={settings}
+              />
+            ))}
+          </div>
+
+          {projects.length === 0 && (
+            <p className="py-16 text-center text-lg text-white/70">
+              Project windows will appear here as soon as they are published.
+            </p>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="projects" className="section-padding">
       <div className="section-container">
-        <SectionHeader label="// projects" title="What I've Built" description="Here are some of my recent projects showcasing my skills and experience" />
-        <div className="flex flex-wrap justify-center gap-2 mb-10">
-          {available.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className="relative px-5 py-2.5 text-sm font-medium rounded-xl transition-colors">
-              {cat === c && <motion.div layoutId="projectFilter" className="absolute inset-0 bg-primary rounded-xl" transition={{ type: "spring", stiffness: 300, damping: 30 }} />}
-              <span className={`relative z-10 ${cat === c ? "text-white" : "text-text-secondary hover:text-text-primary"}`}>{c}</span>
-            </button>
+        <SectionHeader
+          label="Projects"
+          title={`Selected work with clear\nproduct thinking`}
+          description={`A closer look at shipped work across ${categorySummary} projects, showing how strategy, interface quality, and engineering come together.`}
+          preset={preset}
+        />
+
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
+          {projects.slice(0, 6).map((project, index) => (
+            <div
+              key={project._id}
+              className={`${
+                index === 0
+                  ? "col-span-2 row-span-1 md:col-span-2"
+                  : index === 3
+                    ? "col-span-2 md:col-span-1"
+                    : index === 4
+                      ? "col-span-1 md:col-span-2"
+                      : "col-span-1"
+              }`}
+            >
+              <ProjectCard
+                project={project}
+                index={index}
+                preset={preset}
+                settings={settings}
+              />
+            </div>
           ))}
         </div>
-        <AnimatePresence mode="wait">
-          <motion.div key={cat} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((p, i) => <ProjectCard key={p._id} project={p} index={i} />)}
-          </motion.div>
-        </AnimatePresence>
-        {filtered.length === 0 && <p className="text-center py-16 text-text-muted text-lg">No projects in this category yet.</p>}
+
+        {projects.length === 0 && (
+          <p className="py-16 text-center text-lg text-muted-foreground">
+            Selected projects will appear here as they are published.
+          </p>
+        )}
       </div>
     </section>
   );

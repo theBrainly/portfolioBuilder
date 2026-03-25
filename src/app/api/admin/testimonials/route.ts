@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Testimonial from "@/models/Testimonial";
 import { testimonialSchema } from "@/lib/validations";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const testimonials = await Testimonial.find()
+    const testimonials = await Testimonial.find({ userId: user.id })
       .sort({ order: 1, createdAt: -1 })
       .lean();
 
@@ -28,8 +27,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -37,7 +36,7 @@ export async function POST(req: NextRequest) {
     const validated = testimonialSchema.parse(body);
 
     await connectDB();
-    const testimonial = await Testimonial.create(validated);
+    const testimonial = await Testimonial.create({ ...validated, userId: user.id });
 
     return NextResponse.json(
       { success: true, data: testimonial, message: "Testimonial added!" },

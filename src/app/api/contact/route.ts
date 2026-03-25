@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Message from "@/models/Message";
+import { getPortfolioBySlug } from "@/lib/portfolioUsers";
 import { contactSchema } from "@/lib/validations";
 import { sendContactEmail } from "@/lib/email";
 
@@ -9,12 +10,26 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validated = contactSchema.parse(body);
 
+    const portfolio = await getPortfolioBySlug(validated.portfolioSlug);
+    if (!portfolio?.settings) {
+      return NextResponse.json(
+        { success: false, error: "Portfolio not found" },
+        { status: 404 }
+      );
+    }
+
     await connectDB();
 
-    const message = await Message.create(validated);
+    const message = await Message.create({
+      ...validated,
+      userId: portfolio.userId,
+    });
 
     // Send email notification (non-blocking)
-    sendContactEmail(validated).catch((err) =>
+    sendContactEmail({
+      ...validated,
+      to: portfolio.settings.email,
+    }).catch((err) =>
       console.error("Email send error:", err)
     );
 

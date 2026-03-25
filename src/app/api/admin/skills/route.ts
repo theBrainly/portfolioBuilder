@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Skill from "@/models/Skill";
 import { skillSchema } from "@/lib/validations";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const skills = await Skill.find()
+    const skills = await Skill.find({ userId: user.id })
       .sort({ order: 1, category: 1 })
       .lean();
 
@@ -28,8 +27,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -37,7 +36,7 @@ export async function POST(req: NextRequest) {
     const validated = skillSchema.parse(body);
 
     await connectDB();
-    const skill = await Skill.create(validated);
+    const skill = await Skill.create({ ...validated, userId: user.id });
 
     return NextResponse.json(
       { success: true, data: skill, message: "Skill added!" },

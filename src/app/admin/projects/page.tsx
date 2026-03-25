@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, Search, Eye, EyeOff, Pencil, Trash2, ExternalLink, Star } from "lucide-react";
@@ -8,14 +8,14 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import DeleteDialog from "@/components/ui/DeleteDialog";
 import Spinner from "@/components/ui/Spinner";
-import { useAdminStore } from "@/store/adminStore";
+import { useAdminMenu } from "@/hooks/useAdminMenu";
 import { truncateText } from "@/lib/utils";
 import { PROJECT_CATEGORIES } from "@/constants";
 import toast from "react-hot-toast";
 import type { IProject } from "@/types";
 
 export default function ProjectsPage() {
-  const setSidebarOpen = useAdminStore((s) => s.setSidebarOpen);
+  const { onMenuClick } = useAdminMenu();
   const [projects, setProjects] = useState<IProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -23,9 +23,7 @@ export default function ProjectsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => { fetchProjects(); }, [search, category]);
-
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
@@ -34,7 +32,9 @@ export default function ProjectsPage() {
       const data = await res.json();
       if (data.success) setProjects(data.data);
     } catch { toast.error("Failed to fetch projects"); } finally { setLoading(false); }
-  };
+  }, [category, search]);
+
+  useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
   const toggleVisibility = async (id: string, current: boolean) => {
     const project = projects.find((p) => p._id === id);
@@ -57,7 +57,7 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <AdminHeader title="Projects" subtitle={`${projects.length} total`} onMenuClick={() => setSidebarOpen(true)}
+      <AdminHeader title="Projects" subtitle={`${projects.length} total`} onMenuClick={onMenuClick}
         actions={<Link href="/admin/projects/new"><Button leftIcon={<Plus className="w-4 h-4" />}>Add Project</Button></Link>} />
       <div className="p-4 md:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">

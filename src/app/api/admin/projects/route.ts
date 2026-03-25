@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Project from "@/models/Project";
 import { projectSchema } from "@/lib/validations";
 import { generateSlug } from "@/lib/utils";
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -21,7 +20,7 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
 
-    const filter: any = {};
+    const filter: any = { userId: user.id };
     if (category && category !== "All") filter.category = category;
     if (search) {
       filter.$or = [
@@ -57,8 +56,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -69,12 +68,12 @@ export async function POST(req: NextRequest) {
 
     // Generate unique slug
     let slug = generateSlug(validated.title);
-    const existingSlug = await Project.findOne({ slug });
+    const existingSlug = await Project.findOne({ userId: user.id, slug });
     if (existingSlug) {
       slug = `${slug}-${Date.now()}`;
     }
 
-    const project = await Project.create({ ...validated, slug });
+    const project = await Project.create({ ...validated, userId: user.id, slug });
 
     return NextResponse.json(
       { success: true, data: project, message: "Project created!" },

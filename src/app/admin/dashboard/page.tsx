@@ -6,12 +6,12 @@ import StatsCard from "@/components/admin/StatsCard";
 import Card from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Spinner from "@/components/ui/Spinner";
-import { useAdminStore } from "@/store/adminStore";
+import { useAdminMenu } from "@/hooks/useAdminMenu";
 import { timeAgo, truncateText } from "@/lib/utils";
 import type { DashboardStats } from "@/types";
 
 export default function DashboardPage() {
-  const setSidebarOpen = useAdminStore((s) => s.setSidebarOpen);
+  const { onMenuClick } = useAdminMenu();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +23,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <AdminHeader title="Dashboard" subtitle="Overview of your portfolio" onMenuClick={() => setSidebarOpen(true)} />
+      <AdminHeader title="Dashboard" subtitle="Overview of your portfolio" onMenuClick={onMenuClick} />
       <div className="p-4 md:p-6 space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <StatsCard title="Projects" value={stats?.totalProjects || 0} icon={FolderKanban} color="primary" />

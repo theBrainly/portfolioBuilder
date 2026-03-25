@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Project from "@/models/Project";
 import Experience from "@/models/Experience";
 import Skill from "@/models/Skill";
@@ -10,8 +9,8 @@ import Message from "@/models/Message";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -27,14 +26,14 @@ export async function GET() {
       recentMessages,
       recentProjects,
     ] = await Promise.all([
-      Project.countDocuments(),
-      Experience.countDocuments(),
-      Skill.countDocuments(),
-      Testimonial.countDocuments(),
-      Message.countDocuments(),
-      Message.countDocuments({ isRead: false }),
-      Message.find().sort({ createdAt: -1 }).limit(5).lean(),
-      Project.find().sort({ createdAt: -1 }).limit(5).lean(),
+      Project.countDocuments({ userId: user.id }),
+      Experience.countDocuments({ userId: user.id }),
+      Skill.countDocuments({ userId: user.id }),
+      Testimonial.countDocuments({ userId: user.id }),
+      Message.countDocuments({ userId: user.id }),
+      Message.countDocuments({ userId: user.id, isRead: false }),
+      Message.find({ userId: user.id }).sort({ createdAt: -1 }).limit(5).lean(),
+      Project.find({ userId: user.id }).sort({ createdAt: -1 }).limit(5).lean(),
     ]);
 
     return NextResponse.json({

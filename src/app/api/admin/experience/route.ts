@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Experience from "@/models/Experience";
 import { experienceSchema } from "@/lib/validations";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const experiences = await Experience.find()
+    const experiences = await Experience.find({ userId: user.id })
       .sort({ order: 1, startDate: -1 })
       .lean();
 
@@ -28,8 +27,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -37,7 +36,7 @@ export async function POST(req: NextRequest) {
     const validated = experienceSchema.parse(body);
 
     await connectDB();
-    const experience = await Experience.create(validated);
+    const experience = await Experience.create({ ...validated, userId: user.id });
 
     return NextResponse.json(
       { success: true, data: experience, message: "Experience added!" },

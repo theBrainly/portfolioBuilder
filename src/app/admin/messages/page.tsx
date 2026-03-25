@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Mail,
   MailOpen,
@@ -30,11 +30,7 @@ export default function AdminMessagesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchMessages();
-  }, [filter]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/messages?filter=${filter}`);
       const data = await res.json();
@@ -44,7 +40,11 @@ export default function AdminMessagesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
 
   const toggleRead = async (id: string, currentRead: boolean) => {
     try {

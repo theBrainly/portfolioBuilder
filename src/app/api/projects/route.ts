@@ -1,17 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/db";
+import { getPortfolioFromRequest } from "@/lib/portfolioUsers";
 import Project from "@/models/Project";
 
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const portfolio = await getPortfolioFromRequest({
+      portfolioSlug: searchParams.get("portfolioSlug"),
+      host: req.headers.get("x-forwarded-host") || req.headers.get("host"),
+    });
+
+    if (!portfolio) {
+      return NextResponse.json(
+        { success: false, error: "Portfolio not found" },
+        { status: 404 }
+      );
+    }
+
     await connectDB();
 
-    const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const featured = searchParams.get("featured");
     const limit = parseInt(searchParams.get("limit") || "0");
 
-    const filter: any = { isVisible: true };
+    const filter: any = { userId: portfolio.userId, isVisible: true };
     if (category && category !== "All") filter.category = category;
     if (featured === "true") filter.isFeatured = true;
 

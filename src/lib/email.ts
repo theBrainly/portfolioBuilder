@@ -12,12 +12,14 @@ export async function sendContactEmail(params: {
   email: string;
   subject: string;
   message: string;
+  to: string;
+  portfolioSlug?: string;
 }) {
-  const { name, email, subject, message } = params;
+  const { name, email, subject, message, to, portfolioSlug } = params;
 
   await transporter.sendMail({
     from: `"Portfolio Contact" <${process.env.SMTP_USER}>`,
-    to: process.env.EMAIL_TO,
+    to: to || process.env.EMAIL_TO,
     replyTo: email,
     subject: `Portfolio: ${subject}`,
     html: `
@@ -26,6 +28,7 @@ export async function sendContactEmail(params: {
         <hr style="border:1px solid #eee">
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
+        ${portfolioSlug ? `<p><strong>Portfolio:</strong> ${portfolioSlug}</p>` : ""}
         <p><strong>Subject:</strong> ${subject}</p>
         <h3>Message:</h3>
         <p style="background:#f5f5f5;padding:16px;border-radius:8px">${message}</p>

@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import connectDB from "./db";
+import { ensurePortfolioSlugAvailable, getDefaultPortfolioSlug } from "@/lib/portfolioUsers";
 import User from "@/models/User";
 
 export const authOptions: NextAuthOptions = {
@@ -25,11 +26,26 @@ export const authOptions: NextAuthOptions = {
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) throw new Error("Invalid email or password");
 
+        let portfolioSlug = user.portfolioSlug;
+        if (!portfolioSlug) {
+          try {
+            portfolioSlug = await ensurePortfolioSlugAvailable(
+              getDefaultPortfolioSlug(user),
+              user._id.toString()
+            );
+          } catch {
+            portfolioSlug = `portfolio-${user._id.toString().slice(-6)}`;
+          }
+
+          await User.findByIdAndUpdate(user._id, { portfolioSlug });
+        }
+
         return {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
+          portfolioSlug,
         };
       },
     }),
@@ -40,6 +56,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.portfolioSlug = user.portfolioSlug;
       }
       return token;
     },
@@ -47,10 +64,11 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.role = token.role;
         session.user.id = token.id;
+        session.user.portfolioSlug = token.portfolioSlug;
       }
       return session;
     },
   },
-  pages: { signIn: "/admin/login" },
+  pages: { signIn: "/login" },
   secret: process.env.NEXTAUTH_SECRET,
 };

@@ -1,5 +1,11 @@
 import { DefaultSession, DefaultUser } from "next-auth";
 import { DefaultJWT } from "next-auth/jwt";
+import type {
+  DesignPreset,
+  HomeSectionId,
+  ThemePalette,
+  NavigableSectionId,
+} from "@/constants/siteCustomization";
 
 // NextAuth type extensions
 declare module "next-auth" {
@@ -7,10 +13,12 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      portfolioSlug: string;
     } & DefaultSession["user"];
   }
   interface User extends DefaultUser {
     role: string;
+    portfolioSlug: string;
   }
 }
 
@@ -18,6 +26,7 @@ declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string;
     role: string;
+    portfolioSlug: string;
   }
 }
 
@@ -120,6 +129,17 @@ export interface ISiteSettings {
   siteTitle: string;
   siteDescription: string;
   ogImage?: string;
+  customDomain?: string;
+  portfolioSlug?: string;
+  brandName: string;
+  brandMark: string;
+  navbarCTA: string;
+  footerDescription: string;
+  footerCopyright: string;
+  themePalette: ThemePalette;
+  designPreset: DesignPreset;
+  homeSectionOrder: HomeSectionId[];
+  sectionLabels: Record<NavigableSectionId, string>;
 }
 
 export interface DashboardStats {

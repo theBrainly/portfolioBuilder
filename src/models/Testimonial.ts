@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface ITestimonialDocument extends Document {
+  userId: mongoose.Types.ObjectId;
   clientName: string;
   clientPosition: string;
   clientImage: string;
@@ -13,6 +14,7 @@ export interface ITestimonialDocument extends Document {
 
 const TestimonialSchema = new Schema<ITestimonialDocument>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     clientName: { type: String, required: true, trim: true },
     clientPosition: { type: String, required: true, trim: true },
     clientImage: { type: String, default: "" },

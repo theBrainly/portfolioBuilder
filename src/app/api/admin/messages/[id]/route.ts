@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Message from "@/models/Message";
 
 export async function PUT(
@@ -9,16 +8,16 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
 
     await connectDB();
-    const message = await Message.findByIdAndUpdate(
-      params.id,
+    const message = await Message.findOneAndUpdate(
+      { _id: params.id, userId: user.id },
       { $set: body },
       { new: true }
     );
@@ -44,13 +43,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const message = await Message.findByIdAndDelete(params.id);
+    const message = await Message.findOneAndDelete({ _id: params.id, userId: user.id });
 
     if (!message) {
       return NextResponse.json(

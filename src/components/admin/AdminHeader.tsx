@@ -11,7 +11,9 @@ export default function AdminHeader({ title, subtitle, onMenuClick, actions }: P
     <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="flex items-center justify-between px-4 md:px-6 h-16">
         <div className="flex items-center gap-4">
-          <button onClick={onMenuClick} className="lg:hidden p-2 hover:bg-surface-2 rounded-lg transition-colors"><Menu className="w-5 h-5" /></button>
+          <button onClick={onMenuClick} className="p-2 hover:bg-surface-2 rounded-lg transition-colors" aria-label="Toggle sidebar">
+            <Menu className="w-5 h-5" />
+          </button>
           <div><h1 className="text-lg font-bold">{title}</h1>{subtitle && <p className="text-sm text-text-muted">{subtitle}</p>}</div>
         </div>
         <div className="flex items-center gap-3">

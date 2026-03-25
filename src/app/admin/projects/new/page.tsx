@@ -14,14 +14,14 @@ import Switch from "@/components/ui/Switch";
 import ImageUploader from "@/components/ui/ImageUploader";
 import TagInput from "@/components/admin/TagInput";
 import MultiImageUploader from "@/components/admin/MultiImageUploader";
-import { useAdminStore } from "@/store/adminStore";
+import { useAdminMenu } from "@/hooks/useAdminMenu";
 import { projectSchema, ProjectFormData } from "@/lib/validations";
 import { PROJECT_CATEGORIES, TECH_SUGGESTIONS } from "@/constants";
 import toast from "react-hot-toast";
 
 export default function NewProjectPage() {
   const router = useRouter();
-  const setSidebarOpen = useAdminStore((s) => s.setSidebarOpen);
+  const { onMenuClick } = useAdminMenu();
   const [submitting, setSubmitting] = useState(false);
   const { register, handleSubmit, control, formState: { errors } } = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
@@ -40,7 +40,7 @@ export default function NewProjectPage() {
 
   return (
     <>
-      <AdminHeader title="New Project" subtitle="Create a new project" onMenuClick={() => setSidebarOpen(true)}
+      <AdminHeader title="New Project" subtitle="Create a new project" onMenuClick={onMenuClick}
         actions={<Link href="/admin/projects"><Button variant="ghost" leftIcon={<ArrowLeft className="w-4 h-4" />}>Back</Button></Link>} />
       <div className="p-4 md:p-6 max-w-4xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">

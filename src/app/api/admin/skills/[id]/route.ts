@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Skill from "@/models/Skill";
 import { skillSchema } from "@/lib/validations";
 
@@ -10,8 +9,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -19,7 +18,7 @@ export async function PUT(
     const validated = skillSchema.parse(body);
 
     await connectDB();
-    const skill = await Skill.findByIdAndUpdate(params.id, validated, {
+    const skill = await Skill.findOneAndUpdate({ _id: params.id, userId: user.id }, validated, {
       new: true,
       runValidators: true,
     });
@@ -55,13 +54,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const skill = await Skill.findByIdAndDelete(params.id);
+    const skill = await Skill.findOneAndDelete({ _id: params.id, userId: user.id });
 
     if (!skill) {
       return NextResponse.json(

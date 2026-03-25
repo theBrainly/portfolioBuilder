@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import connectDB from "@/lib/db";
+import { getSessionUser } from "@/lib/session";
 import Project from "@/models/Project";
 import { projectSchema } from "@/lib/validations";
 import { generateSlug } from "@/lib/utils";
@@ -11,13 +10,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
-    const project = await Project.findById(params.id).lean();
+    const project = await Project.findOne({ _id: params.id, userId: user.id }).lean();
 
     if (!project) {
       return NextResponse.json(
@@ -40,8 +39,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -50,7 +49,7 @@ export async function PUT(
 
     await connectDB();
 
-    const existing = await Project.findById(params.id);
+    const existing = await Project.findOne({ _id: params.id, userId: user.id });
     if (!existing) {
       return NextResponse.json(
         { success: false, error: "Project not found" },
@@ -63,14 +62,15 @@ export async function PUT(
     if (validated.title !== existing.title) {
       slug = generateSlug(validated.title);
       const slugExists = await Project.findOne({
+        userId: user.id,
         slug,
         _id: { $ne: params.id },
       });
       if (slugExists) slug = `${slug}-${Date.now()}`;
     }
 
-    const project = await Project.findByIdAndUpdate(
-      params.id,
+    const project = await Project.findOneAndUpdate(
+      { _id: params.id, userId: user.id },
       { ...validated, slug },
       { new: true, runValidators: true }
     );
@@ -99,14 +99,14 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = await getSessionUser();
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await connectDB();
 
-    const project = await Project.findByIdAndDelete(params.id);
+    const project = await Project.findOneAndDelete({ _id: params.id, userId: user.id });
     if (!project) {
       return NextResponse.json(
         { success: false, error: "Project not found" },
