@@ -9,7 +9,7 @@ import {
   ADMIN_MAX_SIDEBAR_WIDTH,
   ADMIN_MIN_SIDEBAR_WIDTH,
 } from "@/constants/adminLayout";
-import { LayoutDashboard, FolderKanban, Briefcase, Wrench, MessageSquareQuote, Mail, Settings, LogOut, Code2, X } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Briefcase, Wrench, MessageSquareQuote, Mail, Settings, LogOut, Code2, X, Crown } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -19,7 +19,8 @@ const navItems = [
   { label: "Testimonials", href: "/admin/testimonials", icon: MessageSquareQuote },
   { label: "Messages", href: "/admin/messages", icon: Mail },
   { label: "Settings", href: "/admin/settings", icon: Settings },
-];
+  { label: "Upgrade", href: "/admin/upgrade", icon: Crown, isUpgrade: true },
+] as const;
 
 interface Props {
   isOpen: boolean;
@@ -63,13 +64,21 @@ export default function Sidebar({
         <nav className={cn("flex-1 py-4 px-3 space-y-1 overflow-y-auto", isCollapsed && "lg:px-2")}>
           {navItems.map((item) => {
             const active = pathname === item.href || (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));
+            const isUpgrade = "isUpgrade" in item && item.isUpgrade;
             return (
               <Link key={item.href} href={item.href} onClick={onClose} title={isCollapsed ? item.label : undefined}
                 className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
                   isCollapsed && "lg:justify-center lg:px-0",
-                  active ? "bg-primary/10 text-primary" : "text-text-secondary hover:text-text-primary hover:bg-surface-2")}>
-                <item.icon className="w-5 h-5 flex-shrink-0" />
+                  isUpgrade && !active
+                    ? "text-amber-500 hover:bg-amber-500/10 hover:text-amber-400"
+                    : active ? "bg-primary/10 text-primary" : "text-text-secondary hover:text-text-primary hover:bg-surface-2")}>
+                <item.icon className={cn("w-5 h-5 flex-shrink-0", isUpgrade && !active && "text-amber-500")} />
                 <span className={cn(isCollapsed && "lg:hidden")}>{item.label}</span>
+                {isUpgrade && !isCollapsed && (
+                  <span className="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-400 to-yellow-600 text-white lg:inline hidden">
+                    PRO
+                  </span>
+                )}
               </Link>
             );
           })}

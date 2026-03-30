@@ -3,6 +3,18 @@ import connectDB from "@/lib/db";
 import { getPortfolioFromRequest } from "@/lib/portfolioUsers";
 import Project from "@/models/Project";
 
+const PROJECT_CATEGORIES = new Set(["Full Stack", "Frontend", "Backend", "Mobile", "Other"]);
+
+function parsePositiveInteger(value: string | null, fallback: number, max: number) {
+  const parsed = Number.parseInt(value || "", 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.min(parsed, max);
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -20,12 +32,14 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    const category = searchParams.get("category");
+    const category = searchParams.get("category")?.trim() || "";
     const featured = searchParams.get("featured");
-    const limit = parseInt(searchParams.get("limit") || "0");
+    const limit = parsePositiveInteger(searchParams.get("limit"), 0, 50);
 
     const filter: any = { userId: portfolio.userId, isVisible: true };
-    if (category && category !== "All") filter.category = category;
+    if (category && category !== "All" && PROJECT_CATEGORIES.has(category)) {
+      filter.category = category;
+    }
     if (featured === "true") filter.isFeatured = true;
 
     let query = Project.find(filter).sort({ order: 1, createdAt: -1 });

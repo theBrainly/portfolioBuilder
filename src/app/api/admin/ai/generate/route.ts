@@ -1,15 +1,16 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { handleApiError, unauthorizedResponse } from "@/lib/apiError";
 import {
   AI_PROVIDERS,
   AI_TARGET_FIELD_IDS,
   AI_TARGET_FIELD_MAP,
   type AIProvider,
 } from "@/constants/aiWriting";
+import { assertFeatureEnabledForUser } from "@/lib/subscription";
+import { getSessionUser } from "@/lib/session";
 
 const AI_PROVIDER_IDS = AI_PROVIDERS.map((provider) => provider.id) as [
   AIProvider,
@@ -122,10 +123,13 @@ function extractMessageContent(payload: any) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const user = await getSessionUser();
+    if (!user) return unauthorizedResponse();
+    await assertFeatureEnabledForUser(
+      user.id,
+      "aiWriting",
+      "AI writing is available on the Pro plan only."
+    );
 
     const body = await req.json();
     const validated = aiGenerateSchema.parse(body);
@@ -228,17 +232,7 @@ export async function POST(req: NextRequest) {
         model: payload?.model || resolvedModel,
       },
     });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return NextResponse.json(
-        { success: false, error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, error: "Failed to generate AI content" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "POST /api/admin/ai/generate");
   }
 }

@@ -3,29 +3,45 @@ import connectDB from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import Project from "@/models/Project";
 import { projectSchema } from "@/lib/validations";
-import { generateSlug } from "@/lib/utils";
+import { escapeRegExp, generateSlug } from "@/lib/utils";
+import { handleApiError, unauthorizedResponse } from "@/lib/apiError";
+import { assertPlanLimit, getEffectiveSubscriptionForUser } from "@/lib/subscription";
+
+const PROJECT_CATEGORIES = new Set(["Full Stack", "Frontend", "Backend", "Mobile", "Other"]);
+
+function parsePositiveInteger(value: string | null, fallback: number, max: number) {
+  const parsed = Number.parseInt(value || "", 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.min(parsed, max);
+}
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return unauthorizedResponse();
 
     await connectDB();
 
     const { searchParams } = new URL(req.url);
-    const category = searchParams.get("category");
-    const search = searchParams.get("search");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
+    const category = searchParams.get("category")?.trim() || "";
+    const search = searchParams.get("search")?.trim() || "";
+    const page = parsePositiveInteger(searchParams.get("page"), 1, 10000);
+    const limit = parsePositiveInteger(searchParams.get("limit"), 20, 100);
 
     const filter: any = { userId: user.id };
-    if (category && category !== "All") filter.category = category;
+    if (category && category !== "All" && PROJECT_CATEGORIES.has(category)) {
+      filter.category = category;
+    }
+
     if (search) {
+      const escapedSearch = escapeRegExp(search.slice(0, 100));
       filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { shortDescription: { $regex: search, $options: "i" } },
+        { title: { $regex: escapedSearch, $options: "i" } },
+        { shortDescription: { $regex: escapedSearch, $options: "i" } },
       ];
     }
 
@@ -47,24 +63,25 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch projects" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/admin/projects");
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return unauthorizedResponse();
 
     const body = await req.json();
     const validated = projectSchema.parse(body);
 
     await connectDB();
+    const [subscription, totalProjects] = await Promise.all([
+      getEffectiveSubscriptionForUser(user.id, { ensureRecord: true }),
+      Project.countDocuments({ userId: user.id }),
+    ]);
+
+    assertPlanLimit(subscription.plan, "maxProjects", totalProjects, "projects");
 
     // Generate unique slug
     let slug = generateSlug(validated.title);
@@ -79,17 +96,7 @@ export async function POST(req: NextRequest) {
       { success: true, data: project, message: "Project created!" },
       { status: 201 }
     );
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return NextResponse.json(
-        { success: false, error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-    console.error("POST /api/admin/projects error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to create project" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "POST /api/admin/projects");
   }
 }

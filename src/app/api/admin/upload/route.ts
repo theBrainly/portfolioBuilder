@@ -2,37 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { uploadImage } from "@/lib/cloudinary";
+import { handleApiError, unauthorizedResponse, AppError } from "@/lib/apiError";
+
+function sanitizeUploadFolder(value: string) {
+  const sanitized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9/_-]/g, "-")
+    .replace(/\.+/g, "-")
+    .replace(/\/{2,}/g, "/")
+    .replace(/^\/+|\/+$/g, "");
+
+  return sanitized ? sanitized.split("/").slice(0, 3).join("/") : "general";
+}
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session) return unauthorizedResponse();
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const folder = (formData.get("folder") as string) || "general";
+    const folder = sanitizeUploadFolder((formData.get("folder") as string) || "general");
 
     if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      throw new AppError("No file provided", 400, "VALIDATION_ERROR");
     }
 
     // Validate file type
     const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!validTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Use JPEG, PNG, WebP, or GIF" },
-        { status: 400 }
+      throw new AppError(
+        "Invalid file type. Use JPEG, PNG, WebP, or GIF",
+        400,
+        "VALIDATION_ERROR"
       );
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "File size must be less than 5MB" },
-        { status: 400 }
-      );
+      throw new AppError("File size must be less than 5MB", 400, "VALIDATION_ERROR");
     }
 
     // Convert file to base64
@@ -47,10 +55,6 @@ export async function POST(req: NextRequest) {
       data: result,
     });
   } catch (error) {
-    console.error("Upload error:", error);
-    return NextResponse.json(
-      { error: "Failed to upload file" },
-      { status: 500 }
-    );
+    return handleApiError(error, "POST /api/admin/upload");
   }
 }

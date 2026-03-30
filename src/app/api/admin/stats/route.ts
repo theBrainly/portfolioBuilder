@@ -6,13 +6,12 @@ import Experience from "@/models/Experience";
 import Skill from "@/models/Skill";
 import Testimonial from "@/models/Testimonial";
 import Message from "@/models/Message";
+import { handleApiError, unauthorizedResponse } from "@/lib/apiError";
 
 export async function GET() {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return unauthorizedResponse();
 
     await connectDB();
 
@@ -50,10 +49,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Stats error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch stats" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/admin/stats");
   }
 }

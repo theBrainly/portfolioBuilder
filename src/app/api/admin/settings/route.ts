@@ -6,35 +6,47 @@ import Settings from "@/models/Settings";
 import User from "@/models/User";
 import { settingsSchema } from "@/lib/validations";
 import { normalizeSiteSettings } from "@/lib/siteSettings";
+import { AppError, handleApiError, unauthorizedResponse } from "@/lib/apiError";
+import {
+  assertAllowedDesignPreset,
+  assertAllowedThemePalette,
+  getEffectiveSubscriptionForUser,
+} from "@/lib/subscription";
+import { PLANS } from "@/constants/plans";
 
 export async function GET() {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return unauthorizedResponse();
 
     return NextResponse.json({
       success: true,
       data: await getOrCreateUserSettings(user),
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch settings" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/admin/settings");
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return unauthorizedResponse();
 
     const body = await req.json();
     const validated = settingsSchema.parse(body);
+    const subscription = await getEffectiveSubscriptionForUser(user.id);
+
+    if (validated.customDomain && !PLANS[subscription.plan].features.customDomain) {
+      throw new AppError(
+        "Custom domains are available on the Pro plan only.",
+        403,
+        "FORBIDDEN"
+      );
+    }
+
+    assertAllowedThemePalette(subscription.plan, validated.themePalette);
+    assertAllowedDesignPreset(subscription.plan, validated.designPreset);
 
     const portfolioSlug = await ensurePortfolioSlugAvailable(validated.portfolioSlug, user.id);
     const customDomain = await ensureCustomDomainAvailable(validated.customDomain, user.id);
@@ -65,22 +77,7 @@ export async function PUT(req: NextRequest) {
       data: normalizeSiteSettings(JSON.parse(JSON.stringify(settings))),
       message: "Settings updated!",
     });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return NextResponse.json(
-        { success: false, error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json(
-      { success: false, error: "Failed to update settings" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, "PUT /api/admin/settings");
   }
 }

@@ -10,6 +10,10 @@ export function generateSlug(text: string): string {
   return slugify(text, { lower: true, strict: true, trim: true });
 }
 
+export function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString("en-US", {
     month: "short",

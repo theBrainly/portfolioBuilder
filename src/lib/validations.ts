@@ -65,10 +65,10 @@ export const testimonialSchema = z.object({
 });
 
 export const contactSchema = z.object({
-  name: z.string().min(2, "Name must be 2+ characters"),
-  email: z.string().email("Invalid email"),
-  subject: z.string().min(3, "Subject must be 3+ characters"),
-  message: z.string().min(10, "Message must be 10+ characters"),
+  name: z.string().trim().min(2, "Name must be 2+ characters"),
+  email: z.string().trim().toLowerCase().email("Invalid email"),
+  subject: z.string().trim().min(3, "Subject must be 3+ characters"),
+  message: z.string().trim().min(10, "Message must be 10+ characters"),
   portfolioSlug: z.string().optional().default(""),
 });
 
@@ -135,13 +135,13 @@ export const settingsSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email"),
+  email: z.string().trim().toLowerCase().email("Invalid email"),
   password: z.string().min(6, "Password must be 6+ characters"),
 });
 
 export const signupSchema = z.object({
-  name: z.string().min(2, "Name must be 2+ characters"),
-  email: z.string().email("Invalid email"),
+  name: z.string().trim().min(2, "Name must be 2+ characters"),
+  email: z.string().trim().toLowerCase().email("Invalid email"),
   password: z.string().min(6, "Password must be 6+ characters"),
   portfolioSlug: z
     .string()

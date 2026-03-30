@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AIContentAssistant from "@/components/admin/AIContentAssistant";
+import ResumeImportAssistant from "@/components/admin/ResumeImportAssistant";
 import SettingsLivePreview from "@/components/admin/SettingsLivePreview";
 import Button from "@/components/ui/Button";
 import DragResizeHandle from "@/components/ui/DragResizeHandle";
@@ -146,6 +147,21 @@ export default function AdminSettingsPage() {
     [setValue]
   );
 
+  const applyResumeSettings = useCallback(
+    (values: Partial<SettingsFormData>) => {
+      Object.entries(values).forEach(([field, value]) => {
+        if (value === undefined || value === null || value === "") return;
+
+        setValue(field as keyof SettingsFormData, value as never, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+      });
+    },
+    [setValue]
+  );
+
   const moveSection = (index: number, direction: "up" | "down") => {
     const nextIndex = direction === "up" ? index - 1 : index + 1;
     if (nextIndex < 0 || nextIndex >= homeSectionOrder.length) return;
@@ -196,6 +212,7 @@ export default function AdminSettingsPage() {
           }
         >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 xl:pr-6">
+            <ResumeImportAssistant onApplySettings={applyResumeSettings} />
             <AIContentAssistant values={previewValues} onApply={applyAiDraft} />
 
             <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">

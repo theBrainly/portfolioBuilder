@@ -1,12 +1,34 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectDB from "@/lib/db";
 import { buildDefaultSettingsData } from "@/lib/portfolioUsers";
+import { AppError, handleApiError } from "@/lib/apiError";
 import User from "@/models/User";
 import Settings from "@/models/Settings";
 
-export async function GET() {
+function hasValidSeedSecret(req: NextRequest) {
+  const configuredSecret = process.env.SEED_SECRET;
+
+  if (!configuredSecret) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  const providedSecret =
+    req.headers.get("x-seed-secret") || req.nextUrl.searchParams.get("secret");
+
+  return providedSecret === configuredSecret;
+}
+
+export async function GET(req: NextRequest) {
   try {
+    if (!hasValidSeedSecret(req)) {
+      throw new AppError(
+        "Seeding is disabled. Provide a valid setup secret to continue.",
+        403,
+        "FORBIDDEN"
+      );
+    }
+
     await connectDB();
 
     // Check if admin already exists
@@ -31,8 +53,20 @@ export async function GET() {
       }
 
       return NextResponse.json({
+        success: true,
         message: "Admin user already exists. Seed skipped.",
       });
+    }
+
+    if (
+      process.env.NODE_ENV === "production" &&
+      (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD)
+    ) {
+      throw new AppError(
+        "ADMIN_EMAIL and ADMIN_PASSWORD must be configured before seeding production.",
+        500,
+        "INTERNAL_ERROR"
+      );
     }
 
     // Create admin user
@@ -69,16 +103,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       message: "✅ Admin user and default settings created successfully!",
-      credentials: {
-        email: process.env.ADMIN_EMAIL || "admin@portfolio.com",
-        note: "Use the password from your .env ADMIN_PASSWORD",
-      },
     });
   } catch (error) {
-    console.error("Seed error:", error);
-    return NextResponse.json(
-      { error: "Failed to seed database" },
-      { status: 500 }
-    );
+    return handleApiError(error, "GET /api/seed");
   }
 }

@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
 import Skill from "@/models/Skill";
 import { skillSchema } from "@/lib/validations";
+import { handleApiError, unauthorizedResponse, notFoundResponse } from "@/lib/apiError";
 
 export async function PUT(
   req: NextRequest,
@@ -10,9 +11,7 @@ export async function PUT(
 ) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return unauthorizedResponse();
 
     const body = await req.json();
     const validated = skillSchema.parse(body);
@@ -23,29 +22,15 @@ export async function PUT(
       runValidators: true,
     });
 
-    if (!skill) {
-      return NextResponse.json(
-        { success: false, error: "Skill not found" },
-        { status: 404 }
-      );
-    }
+    if (!skill) return notFoundResponse("Skill");
 
     return NextResponse.json({
       success: true,
       data: skill,
       message: "Skill updated!",
     });
-  } catch (error: any) {
-    if (error.name === "ZodError") {
-      return NextResponse.json(
-        { success: false, error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json(
-      { success: false, error: "Failed to update skill" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error, `PUT /api/admin/skills/${params.id}`);
   }
 }
 
@@ -55,25 +40,15 @@ export async function DELETE(
 ) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return unauthorizedResponse();
 
     await connectDB();
     const skill = await Skill.findOneAndDelete({ _id: params.id, userId: user.id });
 
-    if (!skill) {
-      return NextResponse.json(
-        { success: false, error: "Skill not found" },
-        { status: 404 }
-      );
-    }
+    if (!skill) return notFoundResponse("Skill");
 
     return NextResponse.json({ success: true, message: "Skill deleted!" });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: "Failed to delete skill" },
-      { status: 500 }
-    );
+    return handleApiError(error, `DELETE /api/admin/skills/${params.id}`);
   }
 }

@@ -18,12 +18,15 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required");
         }
 
+        const email = credentials.email.trim().toLowerCase();
+        const password = credentials.password;
+
         await connectDB();
-        const user = await User.findOne({ email: credentials.email }).select("+password");
+        const user = await User.findOne({ email }).select("+password");
 
         if (!user) throw new Error("Invalid email or password");
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) throw new Error("Invalid email or password");
 
         let portfolioSlug = user.portfolioSlug;
